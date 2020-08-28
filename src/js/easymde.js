@@ -2029,17 +2029,31 @@ EasyMDE.prototype.render = function (el) {
 
 		cm.getWrapperElement().addEventListener('mousemove', function(e) {
 			var onToken=e.target.classList.contains('cm-'+overlayClass) && e.target.innerText.search(/\[|\]/) == -1;
+            var innerText = e.target.innerText;
+
+            var prev = e.target.previousSibling;
+            var first = e.target;
+            while(prev != null && prev.classList.contains('cm-'+overlayClass) && prev.innerText.search(/\[|\]/) == -1) {
+                innerText = prev.innerText + innerText;
+                first = prev;
+                prev = prev.previousSibling;
+            }
+            var next = e.target.nextSibling;
+            while(next != null && next.classList.contains('cm-'+overlayClass) && next.innerText.search(/\[|\]/) == -1) {
+                innerText = innerText + next.innerText;
+                next = next.nextSibling;
+            }
             //var onWidget=(e.target===widget || widget.contains(e.target));
 
-			if (onToken && e.target.innerText!==widget.dataset.token) { // entered token, show widget
-				var rect = e.target.getBoundingClientRect();
+			if (onToken && innerText!==widget.dataset.token) { // entered token, show widget
+				var rect = first.getBoundingClientRect();
 				widget.style.left=rect.left+'px';
 				widget.style.top=rect.bottom+'px';
 				//let charCoords=cm.charCoords(cm.coordsChar({ left: e.pageX, top:e.pageY }));
 				//widget.style.left=(e.pageX-5)+'px';  
 				//widget.style.top=(cm.charCoords(cm.coordsChar({ left: e.pageX, top:e.pageY })).bottom-1)+'px';
 
-				widget.dataset.token=e.target.innerText;
+				widget.dataset.token=innerText;
 				if (typeof widget.onShown==='function') widget.onShown();
 
 			} else if ((e.target===widget || widget.contains(e.target))) { // entered widget, call widget.onEntered
