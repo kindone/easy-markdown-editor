@@ -347,6 +347,9 @@
     color: #7f8c8d;
     font-style: italic;
 }
+.cm-link.cm-locallink {
+    color: red;
+}
 
 .editor-toolbar .easymde-dropdown {
     position: relative;

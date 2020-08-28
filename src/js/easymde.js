@@ -8,8 +8,8 @@ require('codemirror/addon/mode/overlay.js');
 require('codemirror/addon/display/placeholder.js');
 require('codemirror/addon/selection/mark-selection.js');
 require('codemirror/addon/search/searchcursor.js');
-require('codemirror/mode/gfm/gfm.js');
 require('codemirror/mode/xml/xml.js');
+require('./codemirror/zettelkastenmode.js');
 var CodeMirrorSpellChecker = require('codemirror-spell-checker');
 var marked = require('marked/lib/marked');
 
@@ -1981,7 +1981,7 @@ EasyMDE.prototype.render = function (el) {
     if (options.spellChecker !== false) {
         mode = 'spell-checker';
         backdrop = options.parsingConfig;
-        backdrop.name = 'gfm';
+        backdrop.name = 'zfm';
         backdrop.gitHubSpice = false;
 
         CodeMirrorSpellChecker({
@@ -1989,7 +1989,7 @@ EasyMDE.prototype.render = function (el) {
         });
     } else {
         mode = options.parsingConfig;
-        mode.name = 'gfm';
+        mode.name = 'zfm';
         mode.gitHubSpice = false;
     }
 
@@ -2018,6 +2018,61 @@ EasyMDE.prototype.render = function (el) {
         inputStyle: (options.inputStyle != undefined) ? options.inputStyle : isMobile() ? 'contenteditable' : 'textarea',
         spellcheck: (options.nativeSpellcheck != undefined) ? options.nativeSpellcheck : true,
     });
+
+
+	function hoverWidgetOnOverlay(cm, overlayClass, widget) {
+		cm.addWidget({line:0, ch:0}, widget, true);
+		widget.style.position = 'fixed';
+		widget.style.zIndex=100000;
+		widget.style.top=widget.style.left='-1000px'; // hide it 
+		widget.dataset.token=null;
+
+		cm.getWrapperElement().addEventListener('mousemove', function(e) {
+			var onToken=e.target.classList.contains('cm-'+overlayClass) && e.target.innerText.search(/\[|\]/) == -1;
+            //var onWidget=(e.target===widget || widget.contains(e.target));
+
+			if (onToken && e.target.innerText!==widget.dataset.token) { // entered token, show widget
+				var rect = e.target.getBoundingClientRect();
+				widget.style.left=rect.left+'px';
+				widget.style.top=rect.bottom+'px';
+				//let charCoords=cm.charCoords(cm.coordsChar({ left: e.pageX, top:e.pageY }));
+				//widget.style.left=(e.pageX-5)+'px';  
+				//widget.style.top=(cm.charCoords(cm.coordsChar({ left: e.pageX, top:e.pageY })).bottom-1)+'px';
+
+				widget.dataset.token=e.target.innerText;
+				if (typeof widget.onShown==='function') widget.onShown();
+
+			} else if ((e.target===widget || widget.contains(e.target))) { // entered widget, call widget.onEntered
+				if (widget.dataset.entered==='true' && typeof widget.onEntered==='function')  widget.onEntered();
+				widget.dataset.entered='true';
+
+			} else if (!onToken && widget.style.left!=='-1000px') { // we stepped outside
+				widget.style.top=widget.style.left='-1000px'; // hide it 
+				delete widget.dataset.token;
+				widget.dataset.entered='false';
+				if (typeof widget.onHidden==='function') widget.onHidden();
+			}
+
+			return true;
+		});
+	}
+
+	function hyperlinkOverlay(cm) {
+		if (!cm) return;
+
+		var widget=document.createElement('button');
+		widget.innerHTML='&rarr;';
+		widget.onclick=function() { 
+			if (!widget.dataset.token) return;
+			var link=widget.dataset.token;
+			if (!(new RegExp('^(?:(?:https?|ftp)://)', 'i')).test(link)) link='http://'+link;
+			alert('link: ' + link);//window.open(link, '_blank'); 
+			return true;
+		};
+		hoverWidgetOnOverlay(cm, 'url', widget);
+	}
+	
+	hyperlinkOverlay(this.codemirror);
 
     this.codemirror.getScrollerElement().style.minHeight = options.minHeight;
 
